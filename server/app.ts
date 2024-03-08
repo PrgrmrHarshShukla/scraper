@@ -46,6 +46,9 @@ app.get('/getContent', async (req: any, res: any) => {
         }
 
         console.log(nextData);
+        if(!userName){
+            throw new Error("Puppeteer did not work");
+        }
 
         const dataReceived = {...nextData};
         
@@ -104,11 +107,11 @@ app.get('/getContent', async (req: any, res: any) => {
             userDescription: userDesc,
             org: userProf
         })
-    } 
-    catch (error) {
+    }
+    catch (error: any) {
         res.status(500).json({
             msg: "An unexpected error occured in final step!",
-            error: error
+            error: error.message
         })
     }
 })
