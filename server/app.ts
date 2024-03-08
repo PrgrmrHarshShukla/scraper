@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 4000;
 const openai = new OpenAI({ apiKey: process.env.API_KEY });
 
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:3000/api/add', 'https://oppscraper.vercel.app'],
+    origin: '*',
     methods: ["GET"],
     allowedHeaders: ['Content-Type'],
     credentials: true
