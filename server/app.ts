@@ -19,9 +19,9 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: false }));
 
 
-
 app.get('/getContent', async (req: any, res: any) => {
     try {
+
         const URL = decodeURIComponent(req.query.url);
 
         const browser = await puppeteer.launch();
@@ -38,33 +38,16 @@ app.get('/getContent', async (req: any, res: any) => {
             (el: HTMLElement | null) => el ? el.innerText : "-", tweetTextEl
         );
 
-
-        
         const nextData = {
-            userName: userName.split('\n')[0],
+            userName: userName ? userName.split('\n')[0] : "-",
             userID: userName.split('\n')[1] ? userName.split('\n')[1].substring(1) : "-",
             tweetText: tweetText,
             postedOn: "-"
         }
-        
-        
 
-        res.redirect(307, '/extractDetails?data=' + JSON.stringify(nextData));
-        await browser.close();
-    } 
-    catch (error: any) {
-        res.status(500).json({
-            msg: "An unexpected error occured in an intermediate step!",
-            errMsg: error.message,
-            error: error
-        })
-    }
-})
+        console.log(nextData);
 
-
-app.get('/extractDetails', async (req: any, res: any) => {
-    try {
-        const dataReceived = JSON.parse(req.query.data);
+        const dataReceived = {...nextData};
         
         const completion = await openai.chat.completions.create({
             messages: [{ role: "assistant", content: `${dataReceived.tweetText}\n This is a tweet about a hiring or a gig or a hackathon or a startup program. Extract following details:
@@ -82,7 +65,7 @@ app.get('/extractDetails', async (req: any, res: any) => {
         const responseContent = completion.choices[0].message['content'];
         
         const userID = dataReceived.userID;
-        const browser = await puppeteer.launch();
+        // const browser = await puppeteer.launch();
         const page2 = await browser.newPage();
         await page2.goto(`https://twitter.com/${userID}`);
 
@@ -101,6 +84,9 @@ app.get('/extractDetails', async (req: any, res: any) => {
 
         const scrapedData = JSON.parse(responseContent);
         const { commitment, description, deadline, min_pay, max_pay, is_remote, location } = scrapedData;
+
+        console.log(scrapedData);
+        
 
 
         res.status(200).json({
