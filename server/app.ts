@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const puppeteer = require('puppeteer');
+const cheerio = require('cheerio');
 const OpenAI = require("openai");
 require('dotenv').config();
 
@@ -22,34 +23,70 @@ app.use(express.urlencoded({ extended: false }));
 app.get('/getContent', async (req: any, res: any) => {
     try {
 
-        const URL = decodeURIComponent(req.query.url);
+        const mainURL = decodeURIComponent(req.query.url);
+        // const mainURL = "https://twitter.com/itsharshag/status/1764164056225546377";
 
         const browser = await puppeteer.launch();
         const page = await browser.newPage();
-        await page.goto(URL)
+        await page.goto("https://twitter.com/itsharshag/status/1764164056225546377");
 
-        const userNameEl = await page.$('div[data-testid="User-Name"]');
-        const userName = await page.evaluate(
-            (el: HTMLElement | null) => el ? el.innerText : "-", userNameEl
-        );
+        // console.log("\n\n\n");
+        // console.log(await page.content());
+        // console.log("\n\n\n");
 
-        const tweetTextEl = await page.$('div[data-testid="tweetText"]');
-        const tweetText = await page.evaluate(
-            (el: HTMLElement | null) => el ? el.innerText : "-", tweetTextEl
-        );
+        const data = await page.title();
 
+        const regex = /on X:(.*?)(?=\/ X)/;
+
+        const match = data.match(regex);
+        const tweetContent = match ? match[1].trim() : "-";
+        // console.log("\n\nTitle:\n", tweetContent);
+        
+        const regex2 = /^(.*?)(?=\s*on X:)/;
+        const match2 = data.match(regex2);
+        const userName = match2 ? match2[1].trim() : "-";
+        
+        // console.log("\n\nName:\n", userName);
+        
+        const urlRegex = /https:\/\/([^.]+)\.com\/([^\/]+)\/status/;
+        const match3 = mainURL.match(urlRegex);
+        const userID = match3 ? match3[2] : "-";
+        
+        
         const nextData = {
-            userName: userName ? userName.split('\n')[0] : "-",
-            userID: userName.split('\n')[1] ? userName.split('\n')[1].substring(1) : "-",
-            tweetText: tweetText,
+            userName: userName,
+            userID: userID,
+            tweetText: tweetContent,
             postedOn: "-"
         }
 
-        console.log(nextData);
-        if(!userName){
-            throw new Error("Puppeteer did not work");
-        }
+        await browser.close();
 
+        console.log(nextData);
+
+        const browser2 = await puppeteer.launch();
+        const page2 = await browser2.newPage();
+        // await page2.goto(`https://twitter.com/itsharshag`);
+        await page2.goto(`https://twitter.com/${nextData.userID}`);
+        // console.log("\n\n\n");
+        // // console.log(await page2.content());
+        // console.log("\n\n\n");
+
+        const page2Content = await page2.content();
+        const $ = cheerio.load(page2Content);
+        const userDescriptionDiv = $('div[data-testid="UserDescription"]');
+        const userDesc = userDescriptionDiv.text();
+        const userProfSpan = $('span[data-testid="UserProfessionalCategory"]');
+        const userProf = userProfSpan.text();
+
+        console.log(userDesc);
+        console.log(userProf);
+        
+
+        await browser2.close();
+
+        
+        
         const dataReceived = {...nextData};
         
         const completion = await openai.chat.completions.create({
@@ -67,27 +104,13 @@ app.get('/getContent', async (req: any, res: any) => {
 
         const responseContent = completion.choices[0].message['content'];
         
-        const userID = dataReceived.userID;
-        // const browser = await puppeteer.launch();
-        const page2 = await browser.newPage();
-        await page2.goto(`https://twitter.com/${userID}`);
-
-        const userTitleEl = await page2.$('div[data-testid="UserName"]');
-        const userTitle = await page2.evaluate(
-            (el: HTMLElement | null) => el ? el.innerText : "-", userTitleEl
-        );
-        const userDescEl = await page2.$('div[data-testid="UserDescription"]');
-        const userDesc = await page2.evaluate(
-            (el: HTMLElement | null) => el ? el.innerText : null, userDescEl
-        );
-        const userProfEl = await page2.$('div[data-testid="UserProfessionalCategory"]');
-        const userProf = await page2.evaluate(
-            (el: HTMLElement | null) => el ? el.innerText : "-", userProfEl
-        );
-
         const scrapedData = JSON.parse(responseContent);
-        const { commitment, description, deadline, min_pay, max_pay, is_remote, location } = scrapedData;
+        let { commitment, description, deadline, min_pay, max_pay, is_remote, location } = scrapedData;
+        if(is_remote == '-'){
+            is_remote = true;
+        }
 
+        console.log(responseContent);
         console.log(scrapedData);
         
 
@@ -100,10 +123,10 @@ app.get('/getContent', async (req: any, res: any) => {
             max_pay: max_pay ? max_pay : "-",
             is_remote: is_remote ? is_remote : true,
             location: location ? location : "-",
-            userID: userID,
+            userID: nextData.userID,
             tweetContent: dataReceived.tweetText,
             postedOn: dataReceived.postedOn,
-            userName: userTitle.split('\n')[0],
+            userName: nextData.userName,
             userDescription: userDesc,
             org: userProf
         })
