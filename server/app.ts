@@ -59,6 +59,9 @@ app.get('/getContent', async (req: any, res: any) => {
             tweetText: tweetContent,
             postedOn: "-"
         }
+        if(nextData.tweetText == "-"){
+            throw new Error("Puppeteer did not work.");
+        }
 
         await browser.close();
 
