@@ -23,14 +23,16 @@ app.use(express.urlencoded({ extended: false }));
 app.get('/getContent', async (req: any, res: any) => {
     try {
 
-        // const mainURL = decodeURIComponent(req.query.url);
-        const mainURL = "https://twitter.com/itsharshag/status/1764164056225546377";
+        const mainURL = decodeURIComponent(req.query.url);
+        // const mainURL = "https://twitter.com/itsharshag/status/1764164056225546377";
 
         const browser = await puppeteer.launch({
-            headless: true
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
         const page = await browser.newPage();
         await page.goto(mainURL);
+        // await page.waitForNavigation({ timeout: 5000, waitUntil: "domcontentloaded" });
 
         // console.log("\n\n\n");
         // console.log(await page.content());
@@ -70,10 +72,12 @@ app.get('/getContent', async (req: any, res: any) => {
         console.log(nextData);
 
         const browser2 = await puppeteer.launch({
-            headless: true
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
         const page2 = await browser2.newPage();
         await page2.goto(`https://twitter.com/${nextData.userID}`);
+        // await page.waitForNavigation({ timeout: 5000, waitUntil: "domcontentloaded" });
         // console.log("\n\n\n");
         // // console.log(await page2.content());
         // console.log("\n\n\n");
