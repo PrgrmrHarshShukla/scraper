@@ -33,7 +33,7 @@ app.get('/getContent', async (req: any, res: any) => {
             (el: HTMLElement | null) => el ? el.innerText : "-", userNameEl
         );
 
-        const tweetTextEl = await page.$('div[data-testid="User-Name"]');
+        const tweetTextEl = await page.$('div[data-testid="tweetText"]');
         const tweetText = await page.evaluate(
             (el: HTMLElement | null) => el ? el.innerText : "-", tweetTextEl
         );
